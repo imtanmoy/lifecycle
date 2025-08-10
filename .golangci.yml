@@ -1,0 +1,79 @@
+version: "2"
+
+output:
+  formats:
+    text:
+      path: stdout
+
+linters:
+  default: none
+  enable:
+    - asciicheck
+    - bodyclose
+    - dupl
+    - errcheck
+    - errname
+    - errorlint
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - nilerr
+    - nolintlint
+    - revive
+    - staticcheck
+    - testableexamples
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - whitespace
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+    gocyclo:
+      min-complexity: 15
+    dupl:
+      threshold: 100
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - std-error-handling
+    rules:
+      - linters:
+          - bodyclose
+          - dupl
+          - errcheck
+          - gocyclo
+          - gosec
+          - revive
+          - unparam
+        path: _test\.go
+    paths:
+      - examples/
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - goimports
+
+  exclusions:
+    generated: lax
+    paths:
+      - examples/
