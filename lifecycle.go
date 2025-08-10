@@ -24,12 +24,12 @@
 //
 //	lc := lifecycle.New(func(hooks *lifecycle.Hooks, opts *lifecycle.Options) {
 //		opts.ShutdownTimeout = 30 * time.Second
-//		
+//
 //		hooks.OnStart = append(hooks.OnStart, func(ctx context.Context) error {
 //			log.Println("Application started")
 //			return nil
 //		})
-//		
+//
 //		hooks.OnShutdown = append(hooks.OnShutdown, func(ctx context.Context) error {
 //			log.Println("Shutting down gracefully...")
 //			return nil
@@ -57,7 +57,7 @@
 //	lc := lifecycle.Default().Go(func(ctx context.Context) error {
 //		ticker := time.NewTicker(5 * time.Second)
 //		defer ticker.Stop()
-//		
+//
 //		for {
 //			select {
 //			case <-ticker.C:
@@ -123,23 +123,23 @@ type Options struct {
 	// If shutdown takes longer than this duration, the lifecycle will
 	// return with a context.DeadlineExceeded error. Default: 30 seconds.
 	ShutdownTimeout time.Duration `doc:"Maximum time to wait for graceful shutdown" default:"30s"`
-	
+
 	// EnableSIGHUP controls whether to listen for SIGHUP signals.
 	// SIGHUP is commonly used for configuration reloads. Default: true.
-	EnableSIGHUP    bool          `doc:"Listen for SIGHUP signals" default:"true"`
-	
+	EnableSIGHUP bool `doc:"Listen for SIGHUP signals" default:"true"`
+
 	// EnableSIGINT controls whether to listen for SIGINT signals (Ctrl+C).
 	// This is the most common way users terminate applications. Default: true.
-	EnableSIGINT    bool          `doc:"Listen for SIGINT signals" default:"true"`
-	
+	EnableSIGINT bool `doc:"Listen for SIGINT signals" default:"true"`
+
 	// EnableSIGTERM controls whether to listen for SIGTERM signals.
 	// SIGTERM is the standard termination signal used by process managers
 	// and container orchestrators. Default: true.
-	EnableSIGTERM   bool          `doc:"Listen for SIGTERM signals" default:"true"`
-	
+	EnableSIGTERM bool `doc:"Listen for SIGTERM signals" default:"true"`
+
 	// EnableSIGQUIT controls whether to listen for SIGQUIT signals (Ctrl+\).
 	// SIGQUIT typically requests a clean shutdown with core dump. Default: true.
-	EnableSIGQUIT   bool          `doc:"Listen for SIGQUIT signals" default:"true"`
+	EnableSIGQUIT bool `doc:"Listen for SIGQUIT signals" default:"true"`
 }
 
 // HookFunc represents a lifecycle hook function that receives a context
@@ -176,7 +176,7 @@ type HookFunc func(ctx context.Context) error
 //		log.Println("Starting HTTP server...")
 //		return startServer(ctx)
 //	})
-//	
+//
 //	hooks.OnExit = append(hooks.OnExit, func(ctx context.Context) error {
 //		log.Println("Cleaning up resources...")
 //		return cleanup()
@@ -186,26 +186,26 @@ type Hooks struct {
 	// Use for configuration validation, dependency injection setup,
 	// database connection establishment, etc.
 	OnPreStart []HookFunc
-	
+
 	// OnStart hooks execute during application startup.
 	// Use for starting HTTP servers, spawning background goroutines,
 	// initializing services, etc.
-	OnStart    []HookFunc
-	
+	OnStart []HookFunc
+
 	// OnSignal hooks execute immediately when a shutdown signal is received.
 	// Use for logging shutdown reason, sending notifications, quick cleanup tasks.
 	// Keep these hooks fast as they delay the actual shutdown process.
-	OnSignal   []HookFunc
-	
+	OnSignal []HookFunc
+
 	// OnShutdown hooks execute during the graceful shutdown process.
 	// They have a timeout (configured via Options.ShutdownTimeout).
 	// Use for gracefully stopping servers, closing connections, saving state.
 	OnShutdown []HookFunc
-	
+
 	// OnExit hooks execute after shutdown is complete and ALWAYS run,
 	// even if OnShutdown hooks fail or timeout. Use for final resource
 	// cleanup, closing file handles, releasing memory, etc.
-	OnExit     []HookFunc
+	OnExit []HookFunc
 }
 
 // Lifecycle manages the application lifecycle with structured hooks and signal handling.
@@ -245,10 +245,10 @@ var ErrAlreadyRunning = fmt.Errorf("lifecycle: Run already in progress")
 //	lc := lifecycle.New(func(hooks *lifecycle.Hooks, opts *lifecycle.Options) {
 //		// Custom timeout
 //		opts.ShutdownTimeout = 45 * time.Second
-//		
+//
 //		// Disable specific signals
 //		opts.EnableSIGHUP = false
-//		
+//
 //		// Register hooks
 //		hooks.OnStart = append(hooks.OnStart, startDatabase)
 //		hooks.OnExit = append(hooks.OnExit, cleanupResources)
@@ -320,7 +320,7 @@ func Default() *Lifecycle {
 //		syscall.SIGTERM,
 //		syscall.SIGUSR1, // Custom application signal
 //	)
-//	
+//
 //	// Windows-compatible
 //	lc := lifecycle.Default().WithSignals(os.Interrupt)
 func (r *Lifecycle) WithSignals(signals ...os.Signal) *Lifecycle {
@@ -342,7 +342,7 @@ func (r *Lifecycle) WithSignals(signals ...os.Signal) *Lifecycle {
 //
 //	sigChan, cleanup := lc.Listen()
 //	defer cleanup()
-//	
+//
 //	select {
 //	case sig := <-sigChan:
 //		log.Printf("Received signal: %v", sig)
@@ -369,7 +369,7 @@ func (r *Lifecycle) Listen() (<-chan os.Signal, func()) {
 //
 // Execution flow:
 //  1. Execute OnPreStart hooks
-//  2. Execute OnStart hooks  
+//  2. Execute OnStart hooks
 //  3. Wait for OS signal or context cancellation
 //  4. Execute OnSignal hooks
 //  5. Execute OnShutdown hooks (with timeout)
@@ -585,7 +585,7 @@ func (r *Lifecycle) OnExit(hooks ...HookFunc) *Lifecycle {
 //		Addr:    ":8080",
 //		Handler: mux,
 //	}
-//	
+//
 //	lc := lifecycle.Default().AttachHTTPServer(server)
 //	if err := lc.Run(ctx); err != nil {
 //		log.Fatal(err)
@@ -648,7 +648,7 @@ func (r *Lifecycle) AttachHTTPServer(srv *http.Server) *Lifecycle {
 //	lc.Go(func(ctx context.Context) error {
 //		ticker := time.NewTicker(30 * time.Second)
 //		defer ticker.Stop()
-//		
+//
 //		for {
 //			select {
 //			case <-ticker.C:
