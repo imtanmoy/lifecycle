@@ -1,6 +1,7 @@
 # Lifecycle
 
 [![CI](https://github.com/imtanmoy/lifecycle/actions/workflows/ci.yml/badge.svg)](https://github.com/imtanmoy/lifecycle/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/imtanmoy/lifecycle)](https://goreportcard.com/report/github.com/imtanmoy/lifecycle)
 [![Go Reference](https://pkg.go.dev/badge/github.com/imtanmoy/lifecycle.svg)](https://pkg.go.dev/github.com/imtanmoy/lifecycle)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
