@@ -17,11 +17,11 @@ import (
 
 // MetricPoint represents a single metric measurement
 type MetricPoint struct {
-	Name      string                 `json:"name"`
-	Value     float64                `json:"value"`
-	Labels    map[string]string      `json:"labels"`
-	Timestamp time.Time              `json:"timestamp"`
-	Type      string                 `json:"type"` // counter, gauge, histogram
+	Name      string            `json:"name"`
+	Value     float64           `json:"value"`
+	Labels    map[string]string `json:"labels"`
+	Timestamp time.Time         `json:"timestamp"`
+	Type      string            `json:"type"` // counter, gauge, histogram
 }
 
 // Alert represents a monitoring alert
@@ -42,12 +42,12 @@ type MonitoringService struct {
 	mu           sync.RWMutex
 	metrics      map[string][]MetricPoint
 	metricCounts map[string]int64
-	
+
 	// Alerting
-	alerts       map[string]*Alert
-	alertRules   []AlertRule
-	alertCount   int64
-	
+	alerts     map[string]*Alert
+	alertRules []AlertRule
+	alertCount int64
+
 	// Service state
 	startTime    time.Time
 	collectors   map[string]*MetricCollector
@@ -58,7 +58,7 @@ type MonitoringService struct {
 type AlertRule struct {
 	Name        string
 	MetricName  string
-	Condition   string  // "greater_than", "less_than", "equals"
+	Condition   string // "greater_than", "less_than", "equals"
 	Threshold   float64
 	Duration    time.Duration
 	Severity    string
@@ -84,20 +84,20 @@ func main() {
 
 	// Setup HTTP server for monitoring API
 	mux := http.NewServeMux()
-	
+
 	// Metrics endpoints
-	mux.HandleFunc("/metrics", service.metricsHandler)           // Prometheus-style metrics
-	mux.HandleFunc("/metrics/", service.specificMetricHandler)  // Get specific metric
-	mux.HandleFunc("/api/metrics", service.apiMetricsHandler)   // JSON metrics API
-	
+	mux.HandleFunc("/metrics", service.metricsHandler)         // Prometheus-style metrics
+	mux.HandleFunc("/metrics/", service.specificMetricHandler) // Get specific metric
+	mux.HandleFunc("/api/metrics", service.apiMetricsHandler)  // JSON metrics API
+
 	// Alerting endpoints
 	mux.HandleFunc("/alerts", service.alertsHandler)
 	mux.HandleFunc("/alerts/", service.specificAlertHandler)
-	
+
 	// Health and status
 	mux.HandleFunc("/health", service.healthHandler)
 	mux.HandleFunc("/status", service.statusHandler)
-	
+
 	server := &http.Server{
 		Addr:    ":9090",
 		Handler: mux,
@@ -110,7 +110,7 @@ func main() {
 		// === PRE-START: Initialize alert rules ===
 		hooks.OnPreStart = append(hooks.OnPreStart, func(ctx context.Context) error {
 			log.Println("🔍 Initializing monitoring service...")
-			
+
 			// Setup alert rules
 			service.alertRules = []AlertRule{
 				{
@@ -141,7 +141,7 @@ func main() {
 					Description: "Disk usage is above 90%",
 				},
 			}
-			
+
 			log.Printf("✅ Configured %d alert rules", len(service.alertRules))
 			return nil
 		})
@@ -149,7 +149,7 @@ func main() {
 		// === START: Initialize metric collectors ===
 		hooks.OnStart = append(hooks.OnStart, func(ctx context.Context) error {
 			log.Println("📊 Starting metric collectors...")
-			
+
 			// System metrics collector
 			service.collectors["system"] = &MetricCollector{
 				Name:     "system",
@@ -159,7 +159,7 @@ func main() {
 				},
 				stopChan: make(chan struct{}),
 			}
-			
+
 			// Application metrics collector
 			service.collectors["app"] = &MetricCollector{
 				Name:     "application",
@@ -169,7 +169,7 @@ func main() {
 				},
 				stopChan: make(chan struct{}),
 			}
-			
+
 			// Business metrics collector
 			service.collectors["business"] = &MetricCollector{
 				Name:     "business",
@@ -179,7 +179,7 @@ func main() {
 				},
 				stopChan: make(chan struct{}),
 			}
-			
+
 			log.Printf("✅ Configured %d metric collectors", len(service.collectors))
 			return nil
 		})
@@ -187,14 +187,14 @@ func main() {
 		// Start collectors
 		hooks.OnStart = append(hooks.OnStart, func(ctx context.Context) error {
 			log.Println("🔄 Starting metric collection...")
-			
+
 			atomic.StoreInt32(&service.isCollecting, 1)
-			
+
 			for name, collector := range service.collectors {
 				go service.runCollector(ctx, collector)
 				log.Printf("✅ Started %s collector (interval: %v)", name, collector.Interval)
 			}
-			
+
 			return nil
 		})
 
@@ -217,10 +217,10 @@ func main() {
 		// === SIGNAL HANDLING ===
 		hooks.OnSignal = append(hooks.OnSignal, func(ctx context.Context) error {
 			log.Println("📡 Shutdown signal received...")
-			
+
 			// Stop collecting new metrics
 			atomic.StoreInt32(&service.isCollecting, 0)
-			
+
 			// Log final statistics
 			service.mu.RLock()
 			totalMetrics := int64(0)
@@ -229,24 +229,24 @@ func main() {
 			}
 			totalAlerts := len(service.alerts)
 			service.mu.RUnlock()
-			
-			log.Printf("📊 Final metrics: %d total data points across %d metric types", 
+
+			log.Printf("📊 Final metrics: %d total data points across %d metric types",
 				totalMetrics, len(service.metricCounts))
 			log.Printf("🚨 Total alerts: %d", totalAlerts)
-			
+
 			return nil
 		})
 
 		// === SHUTDOWN: Stop collectors gracefully ===
 		hooks.OnShutdown = append(hooks.OnShutdown, func(ctx context.Context) error {
 			log.Println("🛑 Stopping metric collectors...")
-			
+
 			// Stop all collectors
 			for name, collector := range service.collectors {
 				close(collector.stopChan)
 				log.Printf("🛑 Stopped %s collector", name)
 			}
-			
+
 			log.Println("✅ All collectors stopped")
 			return nil
 		})
@@ -254,11 +254,11 @@ func main() {
 		// Export final metrics
 		hooks.OnShutdown = append(hooks.OnShutdown, func(ctx context.Context) error {
 			log.Println("💾 Exporting final metrics...")
-			
+
 			// In a real system, you'd export to persistent storage
 			filename := fmt.Sprintf("metrics_export_%d.json", time.Now().Unix())
 			service.exportMetrics(filename)
-			
+
 			log.Printf("✅ Metrics exported to %s", filename)
 			return nil
 		})
@@ -266,7 +266,7 @@ func main() {
 		// === EXIT: Final cleanup ===
 		hooks.OnExit = append(hooks.OnExit, func(ctx context.Context) error {
 			uptime := time.Since(service.startTime)
-			
+
 			service.mu.RLock()
 			totalMetrics := int64(0)
 			for _, count := range service.metricCounts {
@@ -280,23 +280,23 @@ func main() {
 				}
 			}
 			service.mu.RUnlock()
-			
+
 			log.Println("📈 Final Monitoring Statistics:")
 			log.Printf("   Uptime: %v", uptime)
 			log.Printf("   Total Metrics Collected: %d", totalMetrics)
 			log.Printf("   Metric Types: %d", len(service.metricCounts))
 			log.Printf("   Total Alerts: %d", totalAlerts)
 			log.Printf("   Active Alerts: %d", activeAlerts)
-			
+
 			if totalMetrics > 0 {
 				rate := float64(totalMetrics) / uptime.Seconds()
 				log.Printf("   Collection Rate: %.2f metrics/sec", rate)
 			}
-			
+
 			log.Println("✨ Monitoring service shutdown complete!")
 			return nil
 		})
-		
+
 	}).AttachHTTPServer(server)
 
 	// Start the monitoring service
@@ -341,7 +341,7 @@ func (ms *MonitoringService) collectSystemMetrics() MetricPoint {
 			Type:      "gauge",
 		},
 	}
-	
+
 	// Return random metric
 	return metrics[rand.Intn(len(metrics))]
 }
@@ -364,7 +364,7 @@ func (ms *MonitoringService) collectAppMetrics() MetricPoint {
 			Type:      "histogram",
 		},
 	}
-	
+
 	return metrics[rand.Intn(len(metrics))]
 }
 
@@ -383,17 +383,17 @@ func (ms *MonitoringService) collectBusinessMetrics() MetricPoint {
 func (ms *MonitoringService) runCollector(ctx context.Context, collector *MetricCollector) {
 	ticker := time.NewTicker(collector.Interval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
 			if atomic.LoadInt32(&ms.isCollecting) == 0 {
 				continue
 			}
-			
+
 			// Collect metric
 			metric := collector.CollectFunc()
-			
+
 			// Store metric
 			ms.mu.Lock()
 			if ms.metrics[metric.Name] == nil {
@@ -402,7 +402,7 @@ func (ms *MonitoringService) runCollector(ctx context.Context, collector *Metric
 			ms.metrics[metric.Name] = append(ms.metrics[metric.Name], metric)
 			ms.metricCounts[metric.Name]++
 			ms.mu.Unlock()
-			
+
 		case <-collector.stopChan:
 			log.Printf("📊 Collector %s stopped", collector.Name)
 			return
@@ -416,7 +416,7 @@ func (ms *MonitoringService) runCollector(ctx context.Context, collector *Metric
 func (ms *MonitoringService) runAlertManager(ctx context.Context) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -431,17 +431,17 @@ func (ms *MonitoringService) runAlertManager(ctx context.Context) {
 func (ms *MonitoringService) evaluateAlerts() {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
-	
+
 	for _, rule := range ms.alertRules {
 		metrics, exists := ms.metrics[rule.MetricName]
 		if !exists || len(metrics) == 0 {
 			continue
 		}
-		
+
 		// Get latest metric value
 		latest := metrics[len(metrics)-1]
 		shouldAlert := false
-		
+
 		switch rule.Condition {
 		case "greater_than":
 			shouldAlert = latest.Value > rule.Threshold
@@ -450,9 +450,9 @@ func (ms *MonitoringService) evaluateAlerts() {
 		case "equals":
 			shouldAlert = latest.Value == rule.Threshold
 		}
-		
+
 		alertID := fmt.Sprintf("%s_%s", rule.Name, rule.MetricName)
-		
+
 		if shouldAlert {
 			if _, exists := ms.alerts[alertID]; !exists {
 				// Create new alert
@@ -462,18 +462,18 @@ func (ms *MonitoringService) evaluateAlerts() {
 					Description: rule.Description,
 					Severity:    rule.Severity,
 					Labels: map[string]string{
-						"metric": rule.MetricName,
-						"value":  fmt.Sprintf("%.2f", latest.Value),
+						"metric":    rule.MetricName,
+						"value":     fmt.Sprintf("%.2f", latest.Value),
 						"threshold": fmt.Sprintf("%.2f", rule.Threshold),
 					},
 					Triggered: time.Now(),
 					Active:    true,
 				}
-				
+
 				ms.alerts[alertID] = alert
 				ms.alertCount++
-				
-				log.Printf("🚨 Alert triggered: %s - %s (value: %.2f, threshold: %.2f)", 
+
+				log.Printf("🚨 Alert triggered: %s - %s (value: %.2f, threshold: %.2f)",
 					rule.Severity, rule.Name, latest.Value, rule.Threshold)
 			}
 		} else {
@@ -482,7 +482,7 @@ func (ms *MonitoringService) evaluateAlerts() {
 				now := time.Now()
 				alert.Resolved = &now
 				alert.Active = false
-				
+
 				log.Printf("✅ Alert resolved: %s - %s", rule.Severity, rule.Name)
 			}
 		}
@@ -493,7 +493,7 @@ func (ms *MonitoringService) evaluateAlerts() {
 func (ms *MonitoringService) runMetricCleanup(ctx context.Context) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -508,10 +508,10 @@ func (ms *MonitoringService) runMetricCleanup(ctx context.Context) {
 func (ms *MonitoringService) cleanupOldMetrics() {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
-	
+
 	cutoff := time.Now().Add(-1 * time.Hour) // Keep last hour
 	cleaned := 0
-	
+
 	for name, points := range ms.metrics {
 		newPoints := make([]MetricPoint, 0)
 		for _, point := range points {
@@ -523,7 +523,7 @@ func (ms *MonitoringService) cleanupOldMetrics() {
 		}
 		ms.metrics[name] = newPoints
 	}
-	
+
 	if cleaned > 0 {
 		log.Printf("🧹 Cleaned %d old metric points", cleaned)
 	}
@@ -533,7 +533,7 @@ func (ms *MonitoringService) cleanupOldMetrics() {
 func (ms *MonitoringService) exportMetrics(filename string) {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
-	
+
 	export := map[string]interface{}{
 		"timestamp":     time.Now(),
 		"export_type":   "final_metrics",
@@ -541,7 +541,7 @@ func (ms *MonitoringService) exportMetrics(filename string) {
 		"metric_counts": ms.metricCounts,
 		"alerts":        ms.alerts,
 	}
-	
+
 	// In a real system, write to file
 	_ = export
 	_ = filename
@@ -551,26 +551,26 @@ func (ms *MonitoringService) exportMetrics(filename string) {
 func (ms *MonitoringService) metricsHandler(w http.ResponseWriter, r *http.Request) {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
-	
+
 	w.Header().Set("Content-Type", "text/plain")
-	
+
 	// Prometheus format
 	for name, points := range ms.metrics {
 		if len(points) == 0 {
 			continue
 		}
-		
+
 		latest := points[len(points)-1]
 		labels := make([]string, 0)
 		for k, v := range latest.Labels {
 			labels = append(labels, fmt.Sprintf(`%s="%s"`, k, v))
 		}
-		
+
 		labelStr := ""
 		if len(labels) > 0 {
 			labelStr = "{" + strings.Join(labels, ",") + "}"
 		}
-		
+
 		fmt.Fprintf(w, "# TYPE %s %s\n", name, latest.Type)
 		fmt.Fprintf(w, "%s%s %.2f %d\n", name, labelStr, latest.Value, latest.Timestamp.Unix())
 	}
@@ -579,7 +579,7 @@ func (ms *MonitoringService) metricsHandler(w http.ResponseWriter, r *http.Reque
 func (ms *MonitoringService) apiMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"metrics": ms.metrics,
@@ -590,7 +590,7 @@ func (ms *MonitoringService) apiMetricsHandler(w http.ResponseWriter, r *http.Re
 func (ms *MonitoringService) alertsHandler(w http.ResponseWriter, r *http.Request) {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"alerts": ms.alerts,
@@ -601,8 +601,8 @@ func (ms *MonitoringService) alertsHandler(w http.ResponseWriter, r *http.Reques
 func (ms *MonitoringService) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":    "healthy",
-		"uptime":    time.Since(ms.startTime).Seconds(),
+		"status":     "healthy",
+		"uptime":     time.Since(ms.startTime).Seconds(),
 		"collecting": atomic.LoadInt32(&ms.isCollecting) == 1,
 	})
 }
@@ -610,14 +610,14 @@ func (ms *MonitoringService) healthHandler(w http.ResponseWriter, r *http.Reques
 func (ms *MonitoringService) statusHandler(w http.ResponseWriter, r *http.Request) {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
-	
+
 	activeAlerts := 0
 	for _, alert := range ms.alerts {
 		if alert.Active {
 			activeAlerts++
 		}
 	}
-	
+
 	status := map[string]interface{}{
 		"service":       "monitoring",
 		"uptime":        time.Since(ms.startTime).Seconds(),
@@ -627,7 +627,7 @@ func (ms *MonitoringService) statusHandler(w http.ResponseWriter, r *http.Reques
 		"total_alerts":  len(ms.alerts),
 		"collecting":    atomic.LoadInt32(&ms.isCollecting) == 1,
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(status)
 }
@@ -636,10 +636,10 @@ func (ms *MonitoringService) specificMetricHandler(w http.ResponseWriter, r *htt
 	// Extract metric name from URL path
 	path := strings.TrimPrefix(r.URL.Path, "/metrics/")
 	metricName := strings.Split(path, "/")[0]
-	
+
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
-	
+
 	if metrics, exists := ms.metrics[metricName]; exists {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -656,10 +656,10 @@ func (ms *MonitoringService) specificAlertHandler(w http.ResponseWriter, r *http
 	// Extract alert ID from URL path
 	path := strings.TrimPrefix(r.URL.Path, "/alerts/")
 	alertID := strings.Split(path, "/")[0]
-	
+
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
-	
+
 	if alert, exists := ms.alerts[alertID]; exists {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(alert)
