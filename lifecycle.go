@@ -411,24 +411,23 @@ func (r *Lifecycle) run(ctx context.Context) error {
 	}
 
 	// Run OnStart hooks
-	if err := r.runHooks(ctx, r.hooks.OnStart); err != nil {
-		return err
-	}
+	startErr := r.runHooks(ctx, r.hooks.OnStart)
 
-	// Wait for signal or context cancellation
-	sigChan, cleanup := r.Listen()
-	defer cleanup()
+	var signalErr error
+	if startErr == nil {
+		// Wait for signal or context cancellation only if startup succeeded
+		sigChan, cleanup := r.Listen()
+		defer cleanup()
 
-	select {
-	case <-sigChan:
-		// OS signal received
-	case <-ctx.Done():
-		// Context cancelled
-	}
+		select {
+		case <-sigChan:
+			// OS signal received
+		case <-ctx.Done():
+			// Context cancelled
+		}
 
-	// Run OnSignal hooks
-	if err := r.runHooks(ctx, r.hooks.OnSignal); err != nil {
-		return err
+		// Run OnSignal hooks; don't abort shutdown on error
+		signalErr = r.runHooks(ctx, r.hooks.OnSignal)
 	}
 
 	// Create shutdown context with timeout
@@ -441,8 +440,8 @@ func (r *Lifecycle) run(ctx context.Context) error {
 	// Always run OnExit hooks, even if OnShutdown failed
 	exitErr := r.runHooks(shutdownCtx, r.hooks.OnExit)
 
-	// return both if present (nil values are ignored)
-	return errors.Join(shutdownErr, exitErr)
+	// return all relevant errors (nil values are ignored)
+	return errors.Join(startErr, signalErr, shutdownErr, exitErr)
 }
 
 // runHooks executes a slice of hooks and returns the first error encountered.
@@ -509,7 +508,9 @@ func (r *Lifecycle) OnStart(hooks ...HookFunc) *Lifecycle {
 // graceful shutdown. Use them for logging, notifications, or quick state changes.
 //
 // OnSignal hooks execute synchronously in the order they were registered.
-// Errors from these hooks are logged but don't prevent shutdown from proceeding.
+// Errors from these hooks do NOT prevent shutdown from proceeding; any error
+// returned by OnSignal hooks will be preserved in the final returned error
+// alongside shutdown/exit errors.
 //
 // Example:
 //
